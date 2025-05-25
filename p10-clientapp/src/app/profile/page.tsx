@@ -41,7 +41,11 @@ export default function ProfilePage() {
                     <p className="text-sm font-medium">Email</p>
                     <p className="text-lg">{user.email}</p>
                   </div>
-                  <Button>Modifier le profil</Button>
+                  
+                  <div className="flex flex-col gap-2">
+                  <Button className="py-1 px-2 text-sm">Modifier le profil</Button>
+                  <Button className="py-1 px-2 text-sm">Supprimer le profil</Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
