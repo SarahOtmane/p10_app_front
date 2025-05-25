@@ -36,7 +36,7 @@ export default function Home() {
       <main className="flex-1 flex flex-col items-center justify-start p-4">
         {/* Banner Pilotes */}
         <div className="w-full max-w-md bg-gradient-to-r from-red-600 to-pink-500 rounded-lg p-4 mt-4 flex flex-col items-center relative z-0">
-          <h2 className="text-white text-2xl font-bold mb-1">F1 Fantasy</h2>
+          <h2 className="text-white text-2xl font-bold mb-1">F1 </h2>
           <p className="text-white text-sm mb-4">The Official Formula 1 Fantasy Game</p>
           <div className="h-32 w-full relative rounded mb-2 overflow-hidden">
             <Image 
@@ -77,8 +77,9 @@ export default function Home() {
             <span className="text-xs ">Durée limite pour finaliser votre équipe...</span>
             <span className="font-mono font-bold text-lg">02 : 18 : 23</span>
           </div>
-          <button className="w-full bg-red-600 text-white py-2 rounded font-bold mt-2 hover:bg-red-700 transition">CHOISISSEZ VOTRE ÉCURIE</button>
-        </div>
+          <Button asChild className="w-full bg-red-600 text-white py-2 rounded font-bold mt-2 hover:bg-red-700 transition">
+  <Link href="/teams">CHOISISSEZ VOTRE ÉCURIE</Link>
+</Button>        </div>
 
      
       </main>

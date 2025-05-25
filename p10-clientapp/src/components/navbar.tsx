@@ -21,7 +21,6 @@ export default function Navbar() {
             height={30}
             className="object-contain"
           />
-          <span className="font-bold text-lg tracking-widest hidden sm:inline">FANTASY</span>
         </div>
 
         {/* Mobile menu button */}
