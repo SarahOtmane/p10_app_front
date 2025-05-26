@@ -1,32 +1,14 @@
 "use client"
 import Link from "next/link"
 import Image from "next/image"
-import { IoFlagOutline, IoPlayCircleOutline } from "react-icons/io5";
 import { Button } from "@/components/ui/button"
-import { useEffect, useState } from "react"
-import { MdHome, MdPlayCircleOutline, MdFlag, MdLeaderboard, MdEmojiEvents } from "react-icons/md";
+import { MdEmojiEvents } from "react-icons/md";
 import Footer from "@/components/footer"
 
-type User = {
-  id: string
-  email: string
-  firstname: string
-  lastname: string
-  role: string
-}
+
 
 export default function Home() {
-  const [user, setUser] = useState<User | null>(null)
-
-  useEffect(() => {
-    fetch("/api/users/me", { credentials: "include" }) 
-      .then((res) => {
-        if (res.ok) return res.json()
-        throw new Error("Not authenticated")
-      })
-      .then((data) => setUser(data))
-      .catch(() => setUser(null))
-  }, [])
+  
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 pb-16">
@@ -122,7 +104,7 @@ export default function Home() {
               </Link>
             </Button>
 
-            {/* Stats rapides (optionnel) */}
+            {/* Stats rapides */}
             <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t border-gray-100">
               <div className="text-center">
                 <div className="text-lg font-bold text-red-600">24</div>

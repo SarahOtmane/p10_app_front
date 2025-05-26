@@ -1,115 +1,68 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import Navbar from "@/components/navbar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import CreateLeagueForm from "@/components/create-league-form"
-
-type User = {
-  id: string
-  email: string
-  firstname: string
-  lastname: string
-  role: string
-  id_avatar?: string
-}
-
+import Footer from "@/components/footer"
 export default function ProfilePage() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
   const [error, setError] = useState("")
   const router = useRouter()
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const token = localStorage.getItem("token")
-        if (!token) {
-          router.push("/login")
-          return
-        }
+    const fetchUser = async () => {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        router.push("/login")
+        return
+      }
 
+      try {
         const response = await fetch("http://localhost:3000/graphql", {
           method: "POST",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
+            Authorization: ` ${token}`,
           },
           body: JSON.stringify({
-            query: `
-              query GetUser {
-                user {
-                  id
-                  email
-                  firstname
-                  lastname
-                  role
-                  id_avatar
-                }
+          query: `
+            query {
+              user {
+                id
+                email
+                firstname
+                lastname
+                role
+                id_avatar
               }
-            `,
-          }),
+            }
+          `,
+        }),
+
         })
 
         const result = await response.json()
-        if (result.errors) {
-          throw new Error(result.errors[0].message)
-        }
+        if (result.errors) throw new Error(result.errors[0].message)
 
         setUser(result.data.user)
       } catch (err: any) {
         setError(err.message)
-        // Si erreur d'auth, rediriger vers login
-        if (err.message.includes("authentifié")) {
-          localStorage.removeItem("token")
-          router.push("/login")
-        }
-      } finally {
-        setLoading(false)
+        console.error("Erreur lors de la récupération du profil:", err)
       }
     }
 
-    fetchUserData()
+    fetchUser()
   }, [router])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-          <p>Chargement du profil...</p>
-        </div>
-      </div>
-    )
-  }
-
   if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">Erreur: {error}</p>
-          <Button onClick={() => router.push("/login")}>
-            Retourner à la connexion
-          </Button>
-        </div>
-      </div>
-    )
+    return <p className="text-red-600 text-center mt-10">{error}</p>
   }
 
   if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="mb-4">Utilisateur non trouvé</p>
-          <Button onClick={() => router.push("/login")}>
-            Se connecter
-          </Button>
-        </div>
-      </div>
-    )
+    return <p className="text-center mt-10">Chargement du profil...</p>
   }
 
   return (
@@ -133,12 +86,8 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <p className="text-sm font-medium">Prénom</p>
-                    <p className="text-lg">{user.firstname}</p>
-                  </div>
-                  <div>
                     <p className="text-sm font-medium">Nom</p>
-                    <p className="text-lg">{user.lastname}</p>
+                    <p className="text-lg">{user.firstname} {user.lastname}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium">Email</p>
@@ -146,12 +95,12 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium">Rôle</p>
-                    <p className="text-lg capitalize">{user.role}</p>
+                    <p className="text-lg">{user.role}</p>
                   </div>
-                  
+
                   <div className="flex flex-col gap-2">
                     <Button className="py-1 px-2 text-sm">Modifier le profil</Button>
-                    <Button variant="destructive" className="py-1 px-2 text-sm">Supprimer le profil</Button>
+                    <Button className="py-1 px-2 text-sm">Supprimer le profil</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -167,10 +116,8 @@ export default function ProfilePage() {
                   <div className="text-center py-8">
                     <p className="text-gray-500 mb-4">Vous ne participez à aucune ligue pour le moment.</p>
                     <Button variant="outline" onClick={() => {
-                      const element = document.querySelector('[data-value="create"]');
-                      if (element instanceof HTMLElement) {
-                        element.click();
-                      }
+                      const element = document.querySelector('[data-value="create"]')
+                      if (element instanceof HTMLElement) element.click()
                     }}>
                       Créer une ligue
                     </Button>
@@ -193,7 +140,7 @@ export default function ProfilePage() {
           </Tabs>
         </div>
       </main>
+      <Footer />
     </div>
   )
 }
-

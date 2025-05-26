@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -12,6 +13,7 @@ export default function RegisterPage() {
   })
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+  const router = useRouter()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -49,7 +51,36 @@ export default function RegisterPage() {
       if (result.errors) {
         throw new Error(result.errors[0].message)
       }
+      
+      // Après inscription réussie, connecter automatiquement l'utilisateur
+      const loginResponse = await fetch("http://localhost:3000/graphql", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: `
+          mutation LoginAUser($email: String!, $password: String!) {
+            loginAUser(email: $email, password: $password)
+          }
+        `,
+          variables: {
+            email: formData.email,
+            password: formData.password,
+          },
+        }),
+      })
+      
+      const loginResult = await loginResponse.json()
+      if (loginResult.errors) {
+        throw new Error(loginResult.errors[0].message)
+      }
+      
+      // Stocker le token et rediriger vers teams
+      localStorage.setItem("token", loginResult.data.loginAUser)
       setSuccess(true)
+      setTimeout(() => {
+        router.push("/teams")
+      }, 1000) // Délai pour voir le message de succès
+      
     } catch (err: any) {
       setError(err.message)
     }
@@ -59,7 +90,7 @@ export default function RegisterPage() {
     <div className="max-w-md mx-auto p-6 border border-gray-200 rounded-lg shadow-sm">
       <h1 className="text-2xl font-bold text-center mb-6">Inscription</h1>
       {success ? (
-        <p className="text-center text-green-600">Inscription réussie! Vous pouvez maintenant <Link href="/login" className="font-medium text-red-600 hover:text-red-500">vous connecter</Link>.</p>
+        <p className="text-center text-green-600">Inscription réussie! Redirection en cours...</p>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4 border border-gray-300 rounded-lg p-4">
           <input
