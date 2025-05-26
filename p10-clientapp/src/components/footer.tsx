@@ -38,7 +38,7 @@ export default function Footer() {
         <MdPlayCircleOutline size={24} />
         Leagues
       </a>
-      <a href={isLoggedIn ? "/racing" : "/login"} className={getLinkClasses("/racing")}>
+      <a href={isLoggedIn ? "/races" : "/login"} className={getLinkClasses("/racing")}>
         <MdFlag size={24} />
         Racing
       </a>
