@@ -325,20 +325,7 @@ export default function LeaguesPage() {
                   <MdGroup className="mx-auto mb-4 text-gray-400" size={48} />
                   <p className="text-gray-400 mb-4">Aucune ligue trouvée</p>
                   <p className="text-gray-500 text-sm mb-6">Créez une ligue ou rejoignez-en une !</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={() => setShowCreateModal(true)}
-                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-                    >
-                      Créer une ligue
-                    </button>
-                    <button
-                      onClick={() => setShowJoinModal(true)}
-                      className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
-                    >
-                      Rejoindre
-                    </button>
-                  </div>
+            
                 </div>
               ) : (
                 leagues.map((league) => (
@@ -405,14 +392,16 @@ export default function LeaguesPage() {
             <div className="grid grid-cols-2 gap-4 mb-8">
               <button
                 className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white rounded-2xl px-6 py-4 font-bold text-lg shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
-                onClick={() => setShowCreateModal(true)}
+                onClick={() => setShowCreateModal(true)}   
+
               >
                 <MdAdd size={24} />
                 Créer
               </button>
-              <button
+              <button cursor="pointer"
                 className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-800 hover:to-gray-700 text-white rounded-2xl px-6 py-4 font-bold text-lg shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
                 onClick={() => setShowJoinModal(true)}
+               
               >
                 <MdGroup size={24} />
                 Rejoindre

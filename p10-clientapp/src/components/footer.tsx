@@ -42,9 +42,9 @@ export default function Footer() {
         <MdFlag size={24} />
         Racing
       </a>
-      <a href={isLoggedIn ? "/drivers" : "/login"} className={getLinkClasses("/drivers")}>
+      <a href={isLoggedIn ? "/ranking" : "/login"} className={getLinkClasses("/ranking")}>
         <MdPerson size={24} />
-        Pilotes
+        Ranking
       </a>
       <a href={isLoggedIn ? "/profile" : "/login"} className={getLinkClasses("/profile")}>
         <MdAccountCircle size={24} />
