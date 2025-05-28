@@ -398,7 +398,7 @@ export default function LeaguesPage() {
                 <MdAdd size={24} />
                 Créer
               </button>
-              <button cursor="pointer"
+              <button
                 className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-800 hover:to-gray-700 text-white rounded-2xl px-6 py-4 font-bold text-lg shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
                 onClick={() => setShowJoinModal(true)}
                

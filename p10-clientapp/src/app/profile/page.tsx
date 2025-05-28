@@ -265,7 +265,7 @@ export default function ProfilePage() {
             track: track || null,
             isPast
           }
-        }).sort((a, b) => {
+        }).sort((a: any, b: any) => {
           // Trier par date (plus récent en premier)
           if (!a.gp || !b.gp) return 0
           return new Date(b.gp.date).getTime() - new Date(a.gp.date).getTime()

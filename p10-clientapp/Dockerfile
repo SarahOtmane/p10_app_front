@@ -1,53 +1,54 @@
-# Build stage
-FROM node:18-alpine AS builder
+# Frontend Dockerfile
+FROM node:18-alpine AS base
 
-# Set working directory
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Remove lock file and install fresh
+RUN rm -f package-lock.json && npm install
 
-# Copy source code
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build the application
+# Next.js collects completely anonymous telemetry data about general usage.
+ENV NEXT_TELEMETRY_DISABLED 1
+
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine AS runner
-
-# Set working directory
+# Development/Production image
+FROM base AS runner
 WORKDIR /app
 
-# Create nextjs user
+ENV NEXT_TELEMETRY_DISABLED 1
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy built application
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+# Copy package files and install for development
+COPY package*.json ./
+RUN rm -f package-lock.json && npm install
 
-# Change ownership
+# Copy built files
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+
+# Set permissions
 RUN chown -R nextjs:nodejs /app
 
-# Switch to nextjs user
 USER nextjs
 
-# Expose port
-EXPOSE 3000
+EXPOSE 3001
 
-# Set environment variables
-ENV NODE_ENV=production
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/api/health || exit 1
-
-# Start the application
-CMD ["node", "server.js"]
+# Use development command for mounted volumes
+CMD ["npm", "run", "dev"]
