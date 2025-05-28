@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CalendarDays, Clock, MapPin, Flag, Filter, Search, X, Users, TrendingUp } from "lucide-react"
+import { useMetrics } from '@/hooks/useMetrics';
 
 type GP = {
   id_api_races: number
@@ -59,6 +60,7 @@ export default function RacesPage() {
   const [betError, setBetError] = useState("")
   
   const router = useRouter()
+  const { trackPageView, trackBet } = useMetrics();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -141,6 +143,10 @@ export default function RacesPage() {
 
     fetchData()
   }, [router])
+
+  useEffect(() => {
+    trackPageView('races');
+  }, [trackPageView])
 
   // Fonction pour récupérer les pilotes
   const fetchPilotes = async () => {
