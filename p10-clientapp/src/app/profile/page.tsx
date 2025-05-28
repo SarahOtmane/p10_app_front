@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Footer from "@/components/footer"
-import { MdLock, MdPublic, MdGroup, MdLink, MdLogout, MdEdit, MdDelete } from "react-icons/md"
+import { MdLock, MdPublic, MdGroup, MdLink, MdLogout, MdEdit, MdDelete, MdSportsMotorsports, MdTrendingUp } from "react-icons/md"
+import Image from "next/image"
 
 type League = {
   id_league: number
@@ -16,11 +17,49 @@ type League = {
   active: boolean
 }
 
+type UserBet = {
+  id: number
+  id_pilote_p10: number
+  id_gp: number
+  point_p10: number | null
+}
+
+type GP = {
+  id_api_races: number
+  season: string
+  date: string
+  time: string
+  id_api_track: number
+}
+
+type Track = {
+  id_api_races: number
+  country_name: string
+  track_name: string
+  picture_country: string
+}
+
+type Pilote = {
+  id_api_pilotes: string
+  name: string
+  name_acronym: string
+  picture?: string
+}
+
+type BetWithDetails = UserBet & {
+  pilote: Pilote | null
+  gp: GP | null
+  track: Track | null
+  isPast: boolean
+}
+
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null)
   const [leagues, setLeagues] = useState<League[]>([])
+  const [userBets, setUserBets] = useState<BetWithDetails[]>([])
   const [error, setError] = useState("")
   const [loadingLeagues, setLoadingLeagues] = useState(false)
+  const [loadingBets, setLoadingBets] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const router = useRouter()
 
@@ -60,8 +99,9 @@ export default function ProfilePage() {
 
         setUser(result.data.user)
         
-        // Après avoir récupéré l'utilisateur, récupérer ses ligues
+        // Récupérer les ligues et les paris
         fetchUserLeagues(token)
+        fetchUserBets(token)
       } catch (err: any) {
         setError(err.message)
         console.error("Erreur lors de la récupération du profil:", err)
@@ -97,7 +137,6 @@ export default function ProfilePage() {
         
         if (result.errors) {
           console.log("Erreur ligues:", result.errors[0].message)
-          // Ne pas bloquer si erreur sur les ligues
           setLeagues([])
         } else {
           setLeagues(result.data.getAllLeaguesOfUser || [])
@@ -110,6 +149,138 @@ export default function ProfilePage() {
       }
     }
 
+    const fetchUserBets = async (token: string) => {
+      try {
+        setLoadingBets(true)
+
+        // Récupérer tous les paris utilisateur, pilotes, GPs et tracks
+        const [betsResponse, pilotesResponse, gpsResponse, tracksResponse] = await Promise.all([
+          fetch("http://localhost:3000/graphql", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: ` ${token}`,
+            },
+            body: JSON.stringify({
+              query: `
+                query  {
+                  getAllResultsOfUser {
+                    id
+                    id_pilote_p10
+                    id_gp
+                    point_p10
+                  }
+                }
+              `,
+            }),
+          }),
+          fetch("http://localhost:3000/graphql", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: ` ${token}`,
+            },
+            body: JSON.stringify({
+              query: `
+                query GetPilotes {
+                  pilotes {
+                    id_api_pilotes
+                    name
+                    name_acronym
+                    picture
+                  }
+                }
+              `,
+            }),
+          }),
+          fetch("http://localhost:3000/graphql", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: ` ${token}`,
+            },
+            body: JSON.stringify({
+              query: `
+                query GetAllGPs {
+                  getAllGPs {
+                    id_api_races
+                    season
+                    date
+                    time
+                    id_api_track
+                  }
+                }
+              `,
+            }),
+          }),
+          fetch("http://localhost:3000/graphql", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: ` ${token}`,
+            },
+            body: JSON.stringify({
+              query: `
+                query GetAllTracks {
+                  getAllTracks {
+                    id_api_races
+                    country_name
+                    track_name
+                    picture_country
+                  }
+                }
+              `,
+            }),
+          })
+        ])
+
+        const [betsResult, pilotesResult, gpsResult, tracksResult] = await Promise.all([
+          betsResponse.json(),
+          pilotesResponse.json(),
+          gpsResponse.json(),
+          tracksResponse.json()
+        ])
+
+        const allBets = betsResult.data?.getAllResultsOfUser || []
+        const pilotes = pilotesResult.data?.pilotes || []
+        const allGPs = gpsResult.data?.getAllGPs || []
+        const allTracks = tracksResult.data?.getAllTracks || []
+
+        // Enrichir les paris avec les détails
+        const now = new Date()
+        const enrichedBets: BetWithDetails[] = allBets.map((bet: UserBet) => {
+          const pilote = pilotes.find((p: Pilote) => 
+            parseInt(p.id_api_pilotes) === bet.id_pilote_p10
+          )
+          const gp = allGPs.find((g: GP) => g.id_api_races === bet.id_gp)
+          const track = gp ? allTracks.find((t: Track) => 
+            t.id_api_races === gp.id_api_track
+          ) : null
+          const isPast = gp ? new Date(gp.date) < now : false
+
+          return {
+            ...bet,
+            pilote: pilote || null,
+            gp: gp || null,
+            track: track || null,
+            isPast
+          }
+        }).sort((a, b) => {
+          // Trier par date (plus récent en premier)
+          if (!a.gp || !b.gp) return 0
+          return new Date(b.gp.date).getTime() - new Date(a.gp.date).getTime()
+        })
+
+        setUserBets(enrichedBets)
+
+      } catch (err: any) {
+        console.error("Erreur lors de la récupération des paris:", err)
+        setUserBets([])
+      } finally {
+        setLoadingBets(false)
+      }
+    }
+
     fetchUser()
   }, [router])
 
@@ -117,10 +288,8 @@ export default function ProfilePage() {
     if (window.confirm("Êtes-vous sûr de vouloir vous déconnecter ?")) {
       setLoggingOut(true)
       
-      // Supprimer le token
       localStorage.removeItem("token")
       
-      // Rediriger vers la page de connexion après un petit délai
       setTimeout(() => {
         router.push("/login")
       }, 500)
@@ -131,6 +300,32 @@ export default function ProfilePage() {
     navigator.clipboard.writeText(sharedLink)
     alert(`Code copié: ${sharedLink}`)
   }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })
+  }
+
+  const getPointsColor = (points: number | null) => {
+    if (points === null) return 'text-gray-400'
+    if (points > 0) return 'text-green-600'
+    return 'text-red-500'
+  }
+
+  const getPointsText = (points: number | null) => {
+    if (points === null) return 'En attente'
+    if (points > 0) return `+${points} pts`
+    return `${points} pts`
+  }
+
+  // Statistiques des paris
+  const pastBets = userBets.filter(bet => bet.isPast)
+  const upcomingBets = userBets.filter(bet => !bet.isPast)
+  const totalPoints = pastBets.reduce((sum, bet) => sum + (bet.point_p10 || 0), 0)
+  const winningBets = pastBets.filter(bet => (bet.point_p10 || 0) > 0).length
 
   if (error) {
     return <p className="text-red-600 text-center mt-10">{error}</p>
@@ -159,8 +354,9 @@ export default function ProfilePage() {
           </div>
 
           <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="profile">Profil</TabsTrigger>
+              <TabsTrigger value="bets">Mes Paris ({userBets.length})</TabsTrigger>
               <TabsTrigger value="leagues">Mes Ligues ({leagues.length})</TabsTrigger>
             </TabsList>
 
@@ -197,6 +393,31 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
+                  {/* Stats globales */}
+                  <div className="border-t pt-6">
+                    <h3 className="font-semibold text-lg mb-4">Statistiques générales</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-blue-50 rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-blue-600">{userBets.length}</div>
+                        <div className="text-sm text-blue-600">Paris placés</div>
+                      </div>
+                      <div className="bg-green-50 rounded-lg p-4 text-center">
+                        <div className={`text-2xl font-bold ${getPointsColor(totalPoints)}`}>
+                          {totalPoints > 0 ? `+${totalPoints}` : totalPoints}
+                        </div>
+                        <div className="text-sm text-green-600">Points totaux</div>
+                      </div>
+                      <div className="bg-purple-50 rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-purple-600">{winningBets}</div>
+                        <div className="text-sm text-purple-600">Paris gagnants</div>
+                      </div>
+                      <div className="bg-orange-50 rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-orange-600">{leagues.length}</div>
+                        <div className="text-sm text-orange-600">Ligues</div>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Actions du profil */}
                   <div className="border-t pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -216,25 +437,163 @@ export default function ProfilePage() {
                       </Button>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-                  {/* Section déconnexion */}
-                  <div className="border-t pt-6">
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <h3 className="font-medium text-red-800 mb-2">Session</h3>
-                      <p className="text-sm text-red-600 mb-3">
-                        Vous êtes actuellement connecté. Vous pouvez vous déconnecter à tout moment.
-                      </p>
+            <TabsContent value="bets">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MdSportsMotorsports size={24} />
+                    Mes Paris F1
+                  </CardTitle>
+                  <CardDescription>
+                    Historique complet de vos paris P10 ({userBets.length} au total)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingBets ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-4"></div>
+                      <p>Chargement des paris...</p>
+                    </div>
+                  ) : userBets.length === 0 ? (
+                    <div className="text-center py-8">
+                      <MdSportsMotorsports className="mx-auto mb-4 text-gray-400" size={48} />
+                      <p className="text-gray-500 mb-4">Vous n&apos;avez placé aucun pari pour le moment.</p>
                       <Button 
-                        variant="outline" 
-                        onClick={handleLogout}
-                        disabled={loggingOut}
-                        className="text-red-600 border-red-200 hover:bg-red-100 hover:border-red-300"
+                        onClick={() => router.push("/races")}
+                        className="flex items-center gap-2"
                       >
-                        <MdLogout size={16} className="mr-2" />
-                        {loggingOut ? "Déconnexion en cours..." : "Se déconnecter"}
+                        <MdSportsMotorsports size={16} />
+                        Voir les courses
                       </Button>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Statistiques des paris */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-blue-50 rounded-lg p-4 text-center">
+                          <div className="text-xl font-bold text-blue-600">{userBets.length}</div>
+                          <div className="text-xs text-blue-600">Total paris</div>
+                        </div>
+                        <div className="bg-orange-50 rounded-lg p-4 text-center">
+                          <div className="text-xl font-bold text-orange-600">{upcomingBets.length}</div>
+                          <div className="text-xs text-orange-600">En attente</div>
+                        </div>
+                        <div className="bg-green-50 rounded-lg p-4 text-center">
+                          <div className="text-xl font-bold text-green-600">{winningBets}</div>
+                          <div className="text-xs text-green-600">Gagnants</div>
+                        </div>
+                        <div className="bg-purple-50 rounded-lg p-4 text-center">
+                          <div className={`text-xl font-bold ${getPointsColor(totalPoints)}`}>
+                            {totalPoints > 0 ? `+${totalPoints}` : totalPoints}
+                          </div>
+                          <div className="text-xs text-purple-600">Points</div>
+                        </div>
+                      </div>
+
+                      {/* Paris à venir */}
+                      {upcomingBets.length > 0 && (
+                        <div className="space-y-3">
+                          <h3 className="font-semibold text-lg flex items-center gap-2">
+                            <MdTrendingUp className="text-orange-500" />
+                            Paris en cours ({upcomingBets.length})
+                          </h3>
+                          <div className="space-y-2">
+                            {upcomingBets.map((bet) => (
+                              <div key={bet.id} className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    {bet.pilote?.picture && (
+                                      <Image 
+                                        src={bet.pilote.picture} 
+                                        alt={bet.pilote.name}
+                                        width={40}
+                                        height={40}
+                                        className="rounded-full object-cover border-2 border-orange-200"
+                                      />
+                                    )}
+                                    <div>
+                                      <div className="font-semibold text-orange-800">
+                                        {bet.pilote?.name || 'Pilote inconnu'}
+                                      </div>
+                                      <div className="text-sm text-orange-600">
+                                        {bet.track?.country_name} • {bet.gp ? formatDate(bet.gp.date) : 'Date inconnue'}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="font-bold text-orange-800">P10</div>
+                                    <div className="text-sm text-orange-600">En attente</div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Historique des paris */}
+                      {pastBets.length > 0 && (
+                        <div className="space-y-3">
+                          <h3 className="font-semibold text-lg flex items-center gap-2">
+                            <MdSportsMotorsports className="text-gray-600" />
+                            Historique des résultats ({pastBets.length})
+                          </h3>
+                          <div className="space-y-2 max-h-96 overflow-y-auto">
+                            {pastBets.map((bet) => (
+                              <div key={bet.id} className={`border rounded-lg p-4 ${
+                                (bet.point_p10 || 0) > 0 
+                                  ? 'bg-green-50 border-green-200' 
+                                  : 'bg-red-50 border-red-200'
+                              }`}>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    {bet.pilote?.picture && (
+                                      <Image 
+                                        src={bet.pilote.picture} 
+                                        alt={bet.pilote.name}
+                                        width={40}
+                                        height={40}
+                                        className="rounded-full object-cover border-2 border-gray-200"
+                                      />
+                                    )}
+                                    <div>
+                                      <div className="font-semibold text-gray-800">
+                                        {bet.pilote?.name || 'Pilote inconnu'}
+                                      </div>
+                                      <div className="text-sm text-gray-600">
+                                        {bet.track?.country_name} • {bet.gp ? formatDate(bet.gp.date) : 'Date inconnue'}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="font-bold text-gray-800">P10</div>
+                                    <div className={`text-sm font-semibold ${getPointsColor(bet.point_p10)}`}>
+                                      {getPointsText(bet.point_p10)}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      <div className="pt-4 border-t">
+                        <Button 
+                          onClick={() => router.push("/races")}
+                          className="w-full flex items-center justify-center gap-2"
+                        >
+                          <MdSportsMotorsports size={16} />
+                          Placer de nouveaux paris
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
